@@ -1,1 +1,1 @@
-include ':app', ':libuvccamera', ':usbCameraCommon', ':app_lite'
+include ':app', ':libuvccamera', ':usbCameraCommon', ':app_lite', ':app_single'
