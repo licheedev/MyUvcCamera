@@ -25,17 +25,16 @@ apply plugin: 'com.android.library'
 
 android {
 
-   	compileOptions {
+    compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
-   	}
-    
+    }
+
     compileSdkVersion 29
 
     defaultConfig {
         minSdkVersion 18
         targetSdkVersion 29
-
     }
     buildTypes {
         release {
@@ -46,14 +45,23 @@ android {
 }
 
 dependencies {
-	api fileTree(dir: 'libs', include: ['*.jar'])
+    api fileTree(dir: 'libs', include: ['*.jar'])
 
-	implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-	implementation 'androidx.annotation:annotation:1.1.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.annotation:annotation:1.1.0'
 
     //api("com.serenegiant:common:2.12.4") {
     //    exclude module: 'support-v4'
     //}
     //
-	api project(':libuvccamera')
+
+    //def useMaven = false
+    def useMaven = true
+    if (useMaven) {
+        api "com.licheedev:uvccamera:${rootProject.ext.version["uvccamera"]}"
+    } else {
+        api project(':libuvccamera')
+    }
 }
+
+apply from: './maven_publish.gradle'

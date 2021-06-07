@@ -1,5 +1,20 @@
 # MyUvcCamera
 
+```gradle
+allprojects {
+  repositories {
+    ...
+    mavenCentral()
+    maven { url 'http://raw.github.com/saki4510t/libcommon/master/repository/' }
+  }
+}
+
+// 包含 ucvcamera 和 usbcameracommon
+implementation 'com.licheedev:usbcameracommon:1.0.1'
+// 仅包含 ucvcamera
+implementation 'com.licheedev:uvccamera:1.0.1'
+
+```
 
 # ↓↓↓↓↓↓↓↓↓↓ 原版UVCCamera ↓↓↓↓↓↓↓↓↓↓
 > https://github.com/saki4510t/UVCCamera

@@ -64,3 +64,5 @@ dependencies {
         exclude module: 'support-v4'
     }
 }
+
+apply from: './maven_publish.gradle'

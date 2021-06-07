@@ -6,8 +6,8 @@ buildscript {
         gitUrl = "https://github.com/licheedev/MyUvcCamera"
 
         version = [// no1 
-                   uvccamera      : "1.0.0",
-                   usbcameracommon: "1.0.0"]
+                   uvccamera      : "1.0.1",
+                   usbcameracommon: "1.0.1"]
     }
     
     repositories {
