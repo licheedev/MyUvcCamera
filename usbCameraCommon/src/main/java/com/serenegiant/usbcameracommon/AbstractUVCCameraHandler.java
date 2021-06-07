@@ -37,9 +37,9 @@ import android.os.Looper;
 import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Surface;
 import android.view.SurfaceHolder;
-
 import com.serenegiant.encoder.MediaAudioEncoder;
 import com.serenegiant.encoder.MediaEncoder;
 import com.serenegiant.encoder.MediaMuxerWrapper;
@@ -50,7 +50,6 @@ import com.serenegiant.usb.IFrameCallback;
 import com.serenegiant.usb.USBMonitor;
 import com.serenegiant.usb.UVCCamera;
 import com.serenegiant.widget.CameraViewInterface;
-
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -60,7 +59,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -83,6 +81,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
 	private static final int MSG_PREVIEW_START = 2;
 	private static final int MSG_PREVIEW_STOP = 3;
 	private static final int MSG_CAPTURE_STILL = 4;//捕捉录制视频数据
+	private static final int MSG_CAPTURE_STILL_JPG = 233;// 拍照截图
 	private static final int MSG_CAPTURE_START = 5;
 	private static final int MSG_CAPTURE_STOP = 6;
 	private static final int MSG_MEDIA_UPDATE = 7;
@@ -201,7 +200,16 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		sendMessage(obtainMessage(MSG_CAPTURE_STILL, path));
 	}
 
-	public void startRecording() {
+    protected void captureStillJpg(final String path,TakePictureListener listener) {
+        try {
+            checkReleased();
+            sendMessage(obtainMessage(MSG_CAPTURE_STILL_JPG, new Pair<>(path, listener)));
+        } catch (Exception e) {
+            listener.onFailure(e);
+        }
+    }
+
+    public void startRecording() {
 		checkReleased();
 		sendEmptyMessage(MSG_CAPTURE_START);
 	}
@@ -311,6 +319,9 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		case MSG_CAPTURE_STILL:
 			thread.handleCaptureStill((String)msg.obj);
 			break;
+        case MSG_CAPTURE_STILL_JPG:
+            thread.handleCaptureStillJpg((Pair<String, TakePictureListener>) msg.obj);
+            break;
 		case MSG_CAPTURE_START:
 			thread.handleStartRecording();
 			break;
@@ -544,6 +555,39 @@ abstract class AbstractUVCCameraHandler extends Handler {
 			}
 		}
 
+        public void handleCaptureStillJpg(Pair<String,TakePictureListener> pair) {
+            if (DEBUG) Log.v(TAG_THREAD, "handleCaptureStill:");
+            final Activity parent = mWeakParent.get();
+            if (parent == null) return;
+            mSoundPool.play(mSoundId, 0.2f, 0.2f, 0, 0, 1.0f);	// play shutter sound
+            try {
+                final Bitmap bitmap = mWeakCameraView.get().captureStillImage();
+                // get buffered output stream for saving a captured still image as a file on external storage.
+                // the file name is came from current time.
+                // You should use extension name as same as CompressFormat when calling Bitmap#compress.
+                final File outputFile = TextUtils.isEmpty(pair.first)
+                    ? MediaMuxerWrapper.getCaptureFile(Environment.DIRECTORY_DCIM, ".jpg")
+                    : new File(pair.first);
+                final BufferedOutputStream os = new BufferedOutputStream(new FileOutputStream(outputFile));
+                try {
+                    try {
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, os);
+                        os.flush();
+                        mHandler.sendMessage(mHandler.obtainMessage(MSG_MEDIA_UPDATE, outputFile.getPath()));
+                        pair.second.onSuccess(outputFile.getAbsolutePath());
+                    } catch (final IOException e) {
+                        pair.second.onFailure(e);
+                    }
+                } finally {
+                    os.close();
+                }
+            } catch (final Exception e) {
+                callOnError(e);
+                pair.second.onFailure(e);
+            }
+        }
+		
+
 		public void setCameraDataCallBack(UvcCameraDataCallBack uvcCameraDataCallBack){
 			this.uvcCameraDataCallBack = uvcCameraDataCallBack;
 		}
@@ -627,7 +671,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
 					final byte[] yuv = new byte[len];
 					frame.get(yuv);
 					uvcCameraDataCallBack.getData(yuv);
-					Log.i(TAG, "-摄像头返回数据------" + yuv.length);
+					//Log.i(TAG, "-摄像头返回数据------" + yuv.length);
 				}
 			}
 		};
